@@ -22,10 +22,6 @@ venv/
 .coverage
 htmlcov/
 
-# Experiment outputs default to results/; commit specific results if you
-# want them in git, but the directory is not tracked by default.
-results/
-
 # Local tooling audit log (contains machine-specific absolute paths)
 .pathwarden/
 
