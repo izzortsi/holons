@@ -11,12 +11,41 @@ from __future__ import annotations
 import numpy as np
 
 
-def step(beta: np.ndarray) -> np.ndarray:
-    """Apply one B3/S23 update to liveness grid `beta`.
+# Conway's Life as a Life-like (outer-totalistic) rule: birth on exactly 3
+# live neighbours, survive on 2 or 3. Used as the default for `step`.
+LIFE_BIRTH: frozenset[int] = frozenset({3})
+LIFE_SURVIVE: frozenset[int] = frozenset({2, 3})
 
-    Returns a new uint8 array of the same shape. The implementation pads
-    `beta` with zeros, computes Moore-neighbour counts via eight slice
-    additions, and applies the standard birth/survive rules.
+
+def _neighbour_lut(counts: frozenset[int]) -> np.ndarray:
+    """Return a length-9 bool lookup table marking the live-neighbour counts.
+
+    `lut[k]` is True iff `k` is in `counts`. Indexed by Moore-neighbour
+    counts, which range over 0..8.
+    """
+    lut = np.zeros(9, dtype=bool)
+    for k in counts:
+        if not (0 <= k <= 8):
+            raise ValueError(f"neighbour count {k} out of range 0..8")
+        lut[k] = True
+    return lut
+
+
+def step_rule(
+    beta: np.ndarray,
+    birth: frozenset[int],
+    survive: frozenset[int],
+) -> np.ndarray:
+    """Apply one outer-totalistic (Life-like) update to liveness grid `beta`.
+
+    `birth` and `survive` are sets of live-neighbour counts (each a subset of
+    0..8): a dead cell becomes live iff its neighbour count is in `birth`, a
+    live cell stays live iff its count is in `survive`. Returns a new uint8
+    array of the same shape, with an open (zero-padded) boundary.
+
+    B0 rules (0 in `birth`) are rejected: with a zero-padded boundary they
+    would spontaneously birth the infinite dead exterior, which this finite,
+    open-boundary model does not represent.
     """
     if beta.dtype != np.uint8:
         raise TypeError(f"beta must be uint8, got {beta.dtype}")
@@ -24,6 +53,8 @@ def step(beta: np.ndarray) -> np.ndarray:
         raise ValueError(f"beta must be 2D, got shape {beta.shape}")
     if beta.shape[0] < 1 or beta.shape[1] < 1:
         raise ValueError(f"beta must be non-empty, got shape {beta.shape}")
+    if 0 in birth:
+        raise ValueError("B0 rules are not supported on an open boundary")
 
     # Pad with dead cells (open boundary). int8 keeps the neighbour sum well
     # below overflow (max 8).
@@ -41,9 +72,20 @@ def step(beta: np.ndarray) -> np.ndarray:
     )
 
     interior = padded[1:-1, 1:-1]
-    birth = (interior == 0) & (n == 3)
-    survive = (interior == 1) & ((n == 2) | (n == 3))
-    return (birth | survive).astype(np.uint8)
+    birth_lut = _neighbour_lut(birth)
+    survive_lut = _neighbour_lut(survive)
+    born = (interior == 0) & birth_lut[n]
+    survived = (interior == 1) & survive_lut[n]
+    return (born | survived).astype(np.uint8)
+
+
+def step(beta: np.ndarray) -> np.ndarray:
+    """Apply one B3/S23 (Conway's Life) update to liveness grid `beta`.
+
+    Thin wrapper over `step_rule` with Life's birth/survive masks. Returns a
+    new uint8 array of the same shape.
+    """
+    return step_rule(beta, LIFE_BIRTH, LIFE_SURVIVE)
 
 
 def evolve(beta: np.ndarray, steps: int) -> np.ndarray:
