@@ -34,6 +34,21 @@ results/
 .vscode/
 .idea/
 
+# LaTeX build artifacts (regenerable from the .tex source)
+*.aux
+*.bbl
+*.blg
+*.log
+*.out
+*.synctex.gz
+*.toc
+*.fls
+*.fdb_latexmk
+paper/*.pdf
+
+# Export bundles
+*.zip
+
 # OS noise
 .DS_Store
 Thumbs.db
