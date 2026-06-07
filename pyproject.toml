@@ -1,0 +1,22 @@
+[project]
+name = "holons"
+version = "0.1.0"
+description = "Simulations for the holarchic framework: temporal-emergence defect measurements on substrates with known microscopic rules"
+requires-python = ">=3.10"
+dependencies = [
+    "numpy>=1.24",
+]
+
+[project.optional-dependencies]
+viz = [
+    "matplotlib>=3.6",
+    "pillow>=9.0",
+]
+
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["holons*"]
